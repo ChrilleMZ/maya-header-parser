@@ -2,8 +2,10 @@ import re
 import logging
 from pprint import pprint
 
+from maya_header_parser import parser_interface
 
-class AsciiHeaderParser:
+
+class AsciiHeaderParser(parser_interface.ParserInterface):
 
     """
     Read/write header on ascii maya file
@@ -29,25 +31,26 @@ class AsciiHeaderParser:
     FILE = "file "
     REQUIRES = "requires "
     UNITS = "currentUnit "
-    PLUGIN = "plugin"
-    FILEINFO = "fileInfo "
+    PLUG = "plugin"
+    FINF = "fileInfo "
     UNKNOWN = "unknown"
 
     def __init__(self, filename, fileinfo_data=None, plugin_data=None):
+        super().__init__(filename, fileinfo_data=fileinfo_data, plugin_data=plugin_data)
 
         self.log = logging.getLogger("maya_header_parser")
 
         self.filename = filename
-        self._header_data = {self.COMMENT: [], self.FILE: [], self.REQUIRES: {}, self.PLUGIN: {}, self.UNITS: {}, self.FILEINFO: {}, self.UNKNOWN:[]}
+        self._header_data = {self.COMMENT: [], self.FILE: [], self.REQUIRES: {}, self.PLUG: {}, self.UNITS: {}, self.FINF: {}, self.UNKNOWN:[]}
         self._header_size = 0
 
         self._unpack_header_data()
 
         if fileinfo_data is not None:
-            self._header_data[self.FILEINFO] = fileinfo_data
+            self._header_data[self.FINF] = fileinfo_data
 
         if plugin_data is not None:
-            self._header_data[self.PLUGIN] = plugin_data
+            self._header_data[self.PLUG] = plugin_data
 
     def _unpack_header_data(self):
         self._header_size = 0
@@ -86,13 +89,13 @@ class AsciiHeaderParser:
                     if variable == "maya":
                         self._header_data[self.REQUIRES][str(variable)] = value
                     else:
-                        self._header_data[self.PLUGIN][str(variable)] = value
+                        self._header_data[self.PLUG][str(variable)] = value
 
-                elif line_data.startswith(self.FILEINFO):
-                    data_split = line_data[len(self.FILEINFO):-1].split(" ")
+                elif line_data.startswith(self.FINF):
+                    data_split = line_data[len(self.FINF):-1].split(" ")
                     variable = data_split[0].strip("\"")
                     value = " ".join(data_split[1:]).strip("\"")
-                    self._header_data[self.FILEINFO][str(variable)] = value
+                    self._header_data[self.FINF][str(variable)] = value
 
                 else:
                     self._header_data[self.UNKNOWN].append(line_data)
@@ -112,45 +115,27 @@ class AsciiHeaderParser:
             elif header_type == self.REQUIRES:
                 header_list += [f"{self.REQUIRES}{key} \"{value}\";\n" for key, value in self._header_data[self.REQUIRES].items()]
 
-            elif header_type == self.PLUGIN:
-                header_list += [f"{self.REQUIRES}\"{key}\" \"{value}\";\n" for key, value in self._header_data[self.PLUGIN].items()]
+            elif header_type == self.PLUG:
+                header_list += [f"{self.REQUIRES}\"{key}\" \"{value}\";\n" for key, value in self._header_data[self.PLUG].items()]
 
-            elif header_type == self.FILEINFO:
-                header_list += [f"{self.FILEINFO}\"{key}\" \"{value}\";\n" for key, value in self._header_data[self.FILEINFO].items()]
+            elif header_type == self.FINF:
+                header_list += [f"{self.FINF}\"{key}\" \"{value}\";\n" for key, value in self._header_data[self.FINF].items()]
 
             elif header_type == self.UNKNOWN:
                 header_list += [f"{item}\n" for item in self._header_data[self.UNKNOWN]]
 
         return header_list
 
-    def get_fileinfo(self, name) -> str:
-        return self._header_data[self.FILEINFO].get(name)
+    def get_maya_version(self) -> int:
+        for key in self._header_data[self.REQUIRES]:
+            if key == "maya":
+                return int(self._header_data[self.REQUIRES][key])
 
-    def set_fileinfo(self, name: str, value: str):
-        self._header_data[self.FILEINFO][name] = value
-
-    def remove_fileinfo(self, name: str):
-        if self._header_data[self.FILEINFO].get(name):
-            self._header_data[self.FILEINFO].pop(name)
-
-    def get_all_fileinfo(self) -> dict:
-        return self._header_data[self.FILEINFO]
-
-    def get_plugin(self, name) -> str:
-        return self._header_data[self.PLUGIN].get(name)
-
-    def set_plugin(self, name: str, value: str):
-        self._header_data[self.PLUGIN][name] = value
-
-    def remove_plugin(self, name: str):
-        if self._header_data[self.PLUGIN].get(name):
-            self._header_data[self.PLUGIN].pop(name)
-
-    def get_all_plugins(self) -> dict:
-        return self._header_data[self.PLUGIN]
-
-    def save(self):
-        self.save_as(self.filename)
+    def set_maya_version(self, version: int):
+        for key in self._header_data[self.REQUIRES]:
+            if key == "maya":
+                self._header_data[self.REQUIRES][key] = str(version)
+                break
 
     def save_as(self, filename):
 
