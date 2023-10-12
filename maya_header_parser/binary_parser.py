@@ -1,5 +1,6 @@
 import struct
 import math
+import logging
 from collections import namedtuple
 import pprint
 
@@ -36,17 +37,17 @@ PLUG = be_word4(b"PLUG")
 IffChunk = namedtuple("IffChunk", ["typeid", "data_offset", "data_length"])
 
 
-class BinaryHeaderPaser:
+class BinaryHeaderParser:
     """
     Read/write header on binary maya file
     Inspired by https://github.com/mottosso/maya-scenefile-parser
 
     Example:
-        maya_file = BinaryHeaderPaser('C:/filepath/filename.mb')
+        maya_file = BinaryHeaderParser('C:/filepath/filename.mb')
 
         maya_file.set_fileinfo("NewFileInfo", "Store string info")     # Set fileinfo
         print(maya_file.get_fileinfo("NewFileInfo"))                   # Get fileinfo
-        print(maya_file.get_all_fileinfos())                           # Get a list of all fileinfos
+        print(maya_file.get_all_fileinfo())                            # Get a list of all fileinfo
         maya_file.remove_fileinfo("NewFileInfo", "Store string info")  # Remove fileinfo
 
         maya_file.set_plugin("fbxmaya", "required version")            # Set plugin requirements
@@ -58,8 +59,10 @@ class BinaryHeaderPaser:
         maya_file.save_as('C:/filepath/newFilename.mb')                # Save to new file
     """
 
-    def __init__(self, filename):
-        self.is_binary = filename.endswith(".mb")
+    def __init__(self, filename, fileinfo_data:dict=None, plugin_data:dict=None):
+
+        self.log = logging.getLogger("maya_header_parser")
+
         self.filename = filename
         self._header_struct = struct.Struct(">LxxxxQ")
         self._main_chunk: IffChunk = None
@@ -72,13 +75,19 @@ class BinaryHeaderPaser:
 
         self._get_all_chunks()
 
+        if fileinfo_data is not None:
+            self._header_data[FINF] = self._convert_str_dict_to_byte_dict(fileinfo_data)
+
+        if plugin_data is not None:
+            self._header_data[PLUG] = self._convert_str_dict_to_byte_dict(plugin_data)
+
     def _get_all_chunks(self):
         """ Fetch all chunks to make it easier to jump to specific data """
         with open(self.filename, "rb") as file_obj:
             self._get_main_chunk(file_obj)
             self._get_head_chunk(file_obj)
             self._get_content_block(file_obj)
-            self._head_data = self._get_header_data(file_obj)
+            self._head_data = self._unpack_header_data(file_obj)
 
     def _get_main_chunk(self, file_obj):
         """ Gets the length of the entire file and offset to the first chunk (Head)"""
@@ -87,7 +96,7 @@ class BinaryHeaderPaser:
         buf = file_obj.read(4)
         chunk_type = struct.unpack(">L", buf)[0]
         if not chunk_type == MAYA:
-            print(f"This dose not look like a maya file {maya_file}")
+            self.log.warning(f"This dose not look like a maya file {maya_file}")
             return []
 
         data_offset = file_obj.tell()
@@ -102,7 +111,7 @@ class BinaryHeaderPaser:
         buf = file_obj.read(4)
         chunk_type = struct.unpack(">L", buf)[0]
         if not chunk_type == HEAD:
-            print("Could not find maya info/header")
+            self.log.warning("Could not find maya info/header")
             return []
 
         data_offset = file_obj.tell()
@@ -119,7 +128,7 @@ class BinaryHeaderPaser:
         file_obj.seek(self._content_block.data_offset)
         return file_obj.read(self._content_block.data_length)
 
-    def _get_header_data(self, file_obj) -> dict:
+    def _unpack_header_data(self, file_obj) -> dict:
         data_end = self._head_chunk.data_length + self._head_chunk.data_offset
         current_offset = self._head_chunk.data_offset
         info_data = {}
@@ -158,7 +167,7 @@ class BinaryHeaderPaser:
         """ Generate a new head chunk based on the size of the header data"""
         return self._header_struct.pack(FOR8, self._head_chunk.data_length + 4) + b"HEAD"
 
-    def _generate_head_data_bytes(self):
+    def _pack_header_data(self):
         head_bytes = b""
         for typeid, type_data in self._head_data.items():
             first = True
@@ -187,7 +196,13 @@ class BinaryHeaderPaser:
         """ Prints byte data in 16 byte chunks (Only for debugging purposes) """
         for index in range(math.ceil(len(data) / 16)):
             current_pos = index * 16
-            print(data[current_pos:current_pos+16])
+            self.log.debug(data[current_pos:current_pos+16])
+
+    def _convert_str_dict_to_byte_dict(self, data) -> dict:
+        byte_dict = {}
+        for key, value in data.items():
+            byte_dict[key.decode(UTF8)] = (value.decode(UTF8), len(value))
+        return byte_dict
 
     def get_header_data(self, raw_data=False):
 
@@ -206,7 +221,7 @@ class BinaryHeaderPaser:
             data = file_obj.read(self._head_chunk.data_length)
             self._print_byte_data(data)
 
-    def get_all_fileinfos(self) -> dict:
+    def get_all_fileinfo(self) -> dict:
         file_info_list = {}
         for name, value in self._head_data[FINF].items():
             file_info_list[name.decode(UTF8)] = value[0].decode(UTF8)
@@ -263,7 +278,7 @@ class BinaryHeaderPaser:
             with open(self.filename, "rb") as file_obj:
                 self._content_data_byte = self._get_content_data(file_obj)
 
-        head_data_bytes = self._generate_head_data_bytes()
+        head_data_bytes = self._pack_header_data()
         new_head_data_diff = len(head_data_bytes) - self._head_chunk.data_length
         self._head_chunk = IffChunk(typeid=FOR8, data_offset=self._head_chunk.data_offset, data_length=len(head_data_bytes))
         self._main_chunk = IffChunk(typeid=FOR8, data_offset=self._main_chunk.data_offset, data_length=(self._main_chunk.data_length + new_head_data_diff))
@@ -284,11 +299,14 @@ if __name__ == "__main__":
     pass
 
     # Testing
-    # maya_file = BinaryHeaderPaser('C:/test/cube_new_round.mb')
+    # maya_file = BinaryHeaderParser('C:/test/cube.mb')
+
+    # maya_file.save_as('C:/test/cube_test2.mb')
     #
     # maya_file.set_fileinfo("NewFileInfo", "Store string info")  # Set fileinfo
     # print(maya_file.get_fileinfo("NewFileInfo"))  # Get fileinfo
-    # print(maya_file.get_all_fileinfos())  # Get a list of all fileinfos
+    # pprint.pprint(maya_file.get_all_fileinfo(), sort_dicts=False)  # Get a list of all fileinfo
+    # pprint.pprint(maya_file.get_all_plugins(), sort_dicts=False)  # Get a list of all plugins
     # maya_file.remove_fileinfo("NewFileInfo", "Store string info")  # Remove fileinfo
     #
     # maya_file.set_plugin("fbxmaya", "required version")  # Set plugin requirements
