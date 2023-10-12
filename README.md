@@ -4,15 +4,15 @@ Parses maya (binary/ascii) info/head, so you read and write extra information to
 
 # Install
 Using pip
-<pre>
+```commandline
 python -m pip install git+https://github.com/rBrenick/script-panel.git
-</pre>
+```
 
 # Usage (WIP)
 
 1. Run this script in a python tab in maya
 
-<pre>
+```python
 from maya_head_parser import binary_head_parser
 maya_file = binary_head_parser.BinaryHeadPaser("c:/filpath/filename.mb")
 maya_file.set_fileinfo("NewFileInfo", "Store string info")     # Set fileinfo
@@ -27,7 +27,7 @@ maya_file.remove_plugin("Embark_info", "Store string info")    # Remove plugin r
 
 maya_file.save()                                               # Save to current file
 maya_file.save_as('C:/test/testfile2.mb')                      # Save to new file
-</pre>
+```
 
 
 
