@@ -36,13 +36,13 @@ PLUG = be_word4(b"PLUG")
 IffChunk = namedtuple("IffChunk", ["typeid", "data_offset", "data_length"])
 
 
-class BinaryHeadPaser:
+class BinaryHeaderPaser:
     """
     Read/write header on binary maya file
     Inspired by https://github.com/mottosso/maya-scenefile-parser
 
     Example:
-        maya_file = MayaBinaryFile('C:/filepath/filename.mb')
+        maya_file = BinaryHeaderPaser('C:/filepath/filename.mb')
 
         maya_file.set_fileinfo("NewFileInfo", "Store string info")     # Set fileinfo
         print(maya_file.get_fileinfo("NewFileInfo"))                   # Get fileinfo
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     pass
 
     # Testing
-    # maya_file = BinaryHeadPaser('C:/test/cube_new_round.mb')
+    # maya_file = BinaryHeaderPaser('C:/test/cube_new_round.mb')
     #
     # maya_file.set_fileinfo("NewFileInfo", "Store string info")  # Set fileinfo
     # print(maya_file.get_fileinfo("NewFileInfo"))  # Get fileinfo

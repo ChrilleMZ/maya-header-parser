@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="maya-head_parser",
+    name="maya-header-parser",
     version="0.00.01",
     author="Christian Martinsson",
     license='MIT',
@@ -12,7 +12,7 @@ setuptools.setup(
     description="Parser thar read/write maya header data (fileinfo/required plugin)",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/ChrilleMZ/maya-head-parser",
+    url="https://github.com/ChrilleMZ/maya-header-parser",
     packages=setuptools.find_packages(),
     package_data={'': ['*.*']},
     classifiers=[
