@@ -10,8 +10,7 @@ python -m pip install git+https://github.com/rBrenick/script-panel.git
 
 # Usage (WIP)
 
-1. Run this script in a python tab in maya
-
+Run this in a python script
 ```python
 from maya_head_parser import binary_head_parser
 maya_file = binary_head_parser.BinaryHeadPaser("c:/filpath/filename.mb")
