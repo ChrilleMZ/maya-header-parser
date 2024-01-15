@@ -15,7 +15,7 @@ class ParserInterface(ABC):
         self._header_data = {}
         self.header_parser = None
 
-    def get_fileinfo(self, name) -> str:
+    def get_fileinfo(self, name: str) -> str:
         return self._header_data[self.FINF].get(name)
 
     def set_fileinfo(self, name: str, value: str):
