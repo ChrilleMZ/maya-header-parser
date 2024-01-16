@@ -15,10 +15,33 @@ class ParserInterface(ABC):
         self._header_data = {}
         self.header_parser = None
 
-    def get_fileinfo(self, name: str) -> str:
-        return self._header_data[self.FINF].get(name)
+    def get_fileinfo(self, name: str, string_safe=True) -> str:
+        """
+        Get file info from given file
+        :param name: Name of file info
+        :param string_safe: Whether to replace " with \" in the value to make it string safe
+            (the string will always be encapsulated in " in ascii files)
+        :return: File info value
+        """
+        value = self._header_data[self.FINF].get(name)
+        # Remove extra escape characters so we return same data that was sent in
+        if string_safe:
+            value = value.replace("\\\"", "\"")
+        return value
 
-    def set_fileinfo(self, name: str, value: str):
+    def set_fileinfo(self, name: str, value: str, string_safe=True):
+        """
+        Add/update a file info, make sure to run the save function to store it
+        :param name: Name of file info
+        :param value: Value of the file info
+        :param string_safe: Whether to replace " with \" in the value to make it string safe
+            (the string will always be encapsulated in " in ascii files)
+        :return:
+        """
+        # Add extra escape character (/) around " to make sure we
+        # still can read current scene even if fileInfo contains "
+        if string_safe:
+            value = value.replace("\"", "\\\"")
         self._header_data[self.FINF][name] = value
 
     def remove_fileinfo(self, name: str):

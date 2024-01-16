@@ -156,17 +156,6 @@ class AsciiHeaderParser(parser_interface.ParserInterface):
         with open(filename, "w", encoding="utf-8") as file_obj:
             file_obj.writelines(new_file_data)
 
-    def get_fileinfo(self, name) -> str:
-        value = self._header_data[self.FINF].get(name)
-        # Remove extra escape characters so we return same data that was sent in
-        value = value.replace("\\\"", "\"")
-        return value
-
-    def set_fileinfo(self, name: str, value: str):
-        # Add extra escape character (/) around " to make sure we
-        # still can read current scene even if fileInfo contains "
-        value = value.replace("\"", "\\\"")
-        self._header_data[self.FINF][name] = value
 
 if __name__ == "__main__":
 
